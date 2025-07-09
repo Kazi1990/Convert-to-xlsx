@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>CSV to XLSX Converter</title>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+</head>
+<body>
+  <h2>Convert CSV to XLSX</h2>
+  <input type="file" id="file-input" accept=".csv">
+  <button onclick="convert()">Convert</button>
+  <p id="status"></p>
+
+  <script type="text/python">
+import io
+import pandas as pd
+from js import document, FileReader, Uint8Array
+
+async def convert():
+    status = document.getElementById("status")
+    file = document.getElementById("file-input").files[0]
+    if not file:
+        status.innerText = "Please select a CSV file."
+        return
+
+    reader = FileReader.new()
+    def onload(event):
+        content = reader.result
+        df = pd.read_csv(io.StringIO(content))
+        output = io.BytesIO()
+        df.to_excel(output, index=False)
+        blob = __new__(Blob([Uint8Array.new(output.getvalue())], { "type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }))
+        link = document.createElement("a")
+        link.href = URL.createObjectURL(blob)
+        link.download = "converted.xlsx"
+        link.click()
+        status.innerText = "File converted and downloaded."
+
+    reader.onload = onload
+    reader.readAsText(file)
+
+  </script>
+
+  <script>
+    async function convert() {
+      const pyodide = await loadPyodide({ indexURL : "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/" });
+      await pyodide.loadPackage("pandas");
+      await pyodide.runPythonAsync(`await convert()`);
+    }
+  </script>
+</body>
+</html>
